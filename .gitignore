@@ -1,0 +1,5 @@
+.env
+data_processing.log
+.vscode
+src/__pycache__
+assets/AkasaAir-DataEngineer-Task1.pdf

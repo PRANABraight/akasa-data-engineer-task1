@@ -1,0 +1,10 @@
+pandas
+matplotlib
+seaborn
+datetime
+xml
+log
+mysql
+os
+dotenv
+logging

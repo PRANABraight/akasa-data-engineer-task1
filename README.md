@@ -189,9 +189,9 @@ Before running:
 -  Data files in `assets/` folder
 -  (Optional) MySQL installed and `.env` created
 
-======================================================================
+---
 PROCESSING COMPLETE!
-========================================
+
 
 All KPIs calculated successfully
 Check 'data_processing.log' for detailed logs
