@@ -1,4 +1,3 @@
-
 import os
 import pandas as pd
 import sqlalchemy
@@ -147,13 +146,13 @@ class DatabaseManager:
         kpis = {}
         
         try:
-            # KPI 1: Repeat Customers (Parameterized)
+            # KPI 1: Repeat Customers (FIXED)
             repeat_customers_query = """
-                SELECT c.customer_name, COUNT(o.order_id) as number_of_orders
+                SELECT c.customer_name, COUNT(DISTINCT o.order_id) as number_of_orders
                 FROM silver_customers c
                 JOIN silver_orders o ON c.mobile_number = o.mobile_number
                 GROUP BY c.customer_id, c.customer_name
-                HAVING COUNT(o.order_id) > 1
+                HAVING COUNT(DISTINCT o.order_id) > 1
                 ORDER BY number_of_orders DESC;
             """
             kpis['repeat_customers'] = self.execute_parameterized_query(repeat_customers_query)

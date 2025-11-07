@@ -125,32 +125,32 @@ class ReportGenerator:
         
         return metrics
     
-    # def generate_json_report(self, gold_data: dict) -> str:
-    #     """
-    #     Generate simple JSON report
-    #     """
-    #     try:
-    #         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    #         report_path = self.output_dir / f"business_report_{timestamp}.json"
+    def generate_json_report(self, gold_data: dict) -> str:
+        """
+        Generate simple JSON report
+        """
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            report_path = self.output_dir / f"business_report_{timestamp}.json"
             
-    #         kpis = gold_data['required_kpis']
-    #         report_data = {
-    #             "report_date": datetime.now().isoformat(),
-    #             "summary": self._calculate_metrics(kpis),
-    #             "kpis": {}
-    #         }
+            kpis = gold_data['required_kpis']
+            report_data = {
+                "report_date": datetime.now().isoformat(),
+                "summary": self._calculate_metrics(kpis),
+                "kpis": {}
+            }
             
-    #         # Add KPI data
-    #         for kpi_name, kpi_data in kpis.items():
-    #             if kpi_name != 'metadata' and hasattr(kpi_data, 'to_dict'):
-    #                 report_data["kpis"][kpi_name] = kpi_data.to_dict('records')
+            # Add KPI data
+            for kpi_name, kpi_data in kpis.items():
+                if kpi_name != 'metadata' and hasattr(kpi_data, 'to_dict'):
+                    report_data["kpis"][kpi_name] = kpi_data.to_dict('records')
             
-    #         with open(report_path, 'w', encoding='utf-8') as f:
-    #             json.dump(report_data, f, indent=2, ensure_ascii=False)
+            with open(report_path, 'w', encoding='utf-8') as f:
+                json.dump(report_data, f, indent=2, ensure_ascii=False)
             
-    #         logger.info(f"JSON report generated: {report_path}")
-    #         return str(report_path)
+            logger.info(f"JSON report generated: {report_path}")
+            return str(report_path)
             
-    #     except Exception as e:
-    #         logger.error(f"JSON report generation failed: {e}")
-    #         return ""
+        except Exception as e:
+            logger.error(f"JSON report generation failed: {e}")
+            return ""

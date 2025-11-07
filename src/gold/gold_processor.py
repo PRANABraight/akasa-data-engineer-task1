@@ -6,8 +6,25 @@ from .kpi_calculator import KPICalculator
 from .business_metrics import BusinessMetrics
 from src.presentation.visualizer import BusinessVisualizer
 from src.presentation.report_generator import ReportGenerator
+import sys
+
+
+LOG_FILE = "logs/akasaair_processing.log"
+
+# Configure logging to write to a file and the console
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE),  # Writes to data_pipeline.log
+        logging.StreamHandler(sys.stdout) # Also prints to console
+    ]
+)
 
 logger = logging.getLogger(__name__)
+logger.info("Logging configured. Starting application.")
+
+
 
 class GoldProcessor:
     """

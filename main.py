@@ -4,6 +4,7 @@ from datetime import datetime
 import sys
 import os
 import traceback
+import pandas as pd
 
 # Add src to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -184,21 +185,24 @@ class MedallionArchitecturePipeline:
             
     def run_table_based_approach(self):
         """
-        Table-Based Approach: Using SQL database for KPI calculation
+        Table-Based Approach: SQL Database Processing - FIXED consistency
         """
-        self.logger.info("="*70)
-        self.logger.info("TABLE-BASED APPROACH: SQL Database Processing")
-        self.logger.info("="*70)
+        print("="*70)
+        print("TABLE-BASED APPROACH: SQL Database Processing")
+        print("="*70)
         
         if not self.db_manager or not self.db_manager.engine:
-            self.logger.warning("No database connection available for table-based approach")
+            print("No database connection available for table-based approach")
             return
             
         try:
             # Calculate KPIs using SQL
             sql_kpis = self.db_manager.calculate_kpis_sql()
             
-            # Display SQL results
+            # Get in-memory KPIs for comparison
+            in_memory_kpis = self.pipeline_results['gold']['data']['required_kpis']
+            
+            # Display SQL results with consistency check
             print("\n" + "="*70)
             print("SQL DATABASE KPI RESULTS")
             print("="*70)
@@ -209,18 +213,45 @@ class MedallionArchitecturePipeline:
                     print("-" * 50)
                     print(kpi_data.to_string(index=False))
                     
-            self.logger.info("Table-based approach completed successfully")
+                    # Data consistency check
+                    if kpi_name in in_memory_kpis:
+                        in_memory_data = in_memory_kpis[kpi_name]
+                        sql_count = len(kpi_data)
+                        memory_count = len(in_memory_data) if hasattr(in_memory_data, '__len__') else 0
+                        
+                        if sql_count != memory_count:
+                            print(f"Data inconsistency: SQL={sql_count}, Memory={memory_count}")
+            
+            print("Table-based approach completed successfully")
             
         except Exception as e:
-            self.logger.error(f"Table-based approach failed: {e}")
+            print(f"Table-based approach failed: {e}")  
+ 
+    def verify_data_consistency(self, sql_kpis: dict, memory_kpis: dict):
+        """
+        Verify consistency between SQL and in-memory calculations
+        """
+        print("\n" + "="*70)
+        print("DATA CONSISTENCY VERIFICATION")
+        print("="*70)
+        
+        for kpi_name in ['repeat_customers', 'monthly_trends', 'regional_revenue', 'top_customers_30d']:
+            sql_data = sql_kpis.get(kpi_name, pd.DataFrame())
+            memory_data = memory_kpis.get(kpi_name, pd.DataFrame())
             
+            sql_count = len(sql_data) if not sql_data.empty else 0
+            memory_count = len(memory_data) if not memory_data.empty else 0
+            
+            status = "CONSISTENT" if sql_count == memory_count else "INCONSISTENT"
+            print(f"{kpi_name:25} | SQL: {sql_count:2} | Memory: {memory_count:2} | {status}")
+
     def run_complete_pipeline(self, calculate_additional_metrics: bool = False):
         """
-        Run complete Medallion Architecture pipeline
-       """
+        Run complete Medallion Architecture pipeline with consistency checks
+        """
         try:
             start_time = datetime.utcnow()
-            self.logger.info("Starting Medallion Architecture Pipeline")
+            print("Starting Medallion Architecture Pipeline")
             
             # Execute all layers
             bronze_data = self.run_bronze_layer()
@@ -230,25 +261,27 @@ class MedallionArchitecturePipeline:
             # Run table-based approach if database available
             self.run_table_based_approach()
             
+            # Verify data consistency
+            if hasattr(self, 'db_manager') and self.db_manager.engine:
+                sql_kpis = self.db_manager.calculate_kpis_sql()
+                memory_kpis = gold_data['required_kpis']
+                self.verify_data_consistency(sql_kpis, memory_kpis)
+            
             # Calculate pipeline statistics
             duration = (datetime.utcnow() - start_time).total_seconds()
             
-            self.logger.info("="*70)
-            self.logger.info("PIPELINE EXECUTION SUMMARY")
-            self.logger.info("="*70)
-            self.logger.info(f"Total duration: {duration:.2f} seconds")
-            self.logger.info(f"Bronze records: {len(bronze_data['customers'])} customers, {len(bronze_data['orders'])} orders")
-            self.logger.info(f"Silver records: {len(silver_data['customers'])} customers, {len(silver_data['orders'])} orders")
-            self.logger.info(f"KPIs calculated: {len(gold_data['required_kpis']) - 1}")
-            
-            
+            print("="*70)
+            print("PIPELINE EXECUTION SUMMARY")
+            print("="*70)
+            print(f"Total duration: {duration:.2f} seconds")
+            print(f"Bronze records: {len(bronze_data['customers'])} customers, {len(bronze_data['orders'])} orders")
+            print(f"Silver records: {len(silver_data['customers'])} customers, {len(silver_data['orders'])} orders")
+            print(f"KPIs calculated: {len(gold_data['required_kpis']) - 1}")
             
         except Exception as e:
-            self.logger.error(f"Pipeline execution failed: {e}")
-            self.logger.error(f"Full error traceback: {traceback.format_exc()}")
-            print(f"\nPipeline execution failed: {e}")
-            print(f"Check logs/akasaair_processing.log for detailed error information")
-            sys.exit(1)
+            print(f"Pipeline execution failed: {e}")
+            raise
+
 
 def main():
     """

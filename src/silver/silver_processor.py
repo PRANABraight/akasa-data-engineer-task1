@@ -4,8 +4,25 @@ from datetime import datetime
 from .data_cleaner import DataCleaner
 from .data_validator import DataValidator
 from .data_enricher import DataEnricher
+import sys
+
+
+LOG_FILE = "logs/akasaair_processing.log"
+
+# Configure logging to write to a file and the console
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE),  # Writes to data_pipeline.log
+        logging.StreamHandler(sys.stdout) # Also prints to console
+    ]
+)
 
 logger = logging.getLogger(__name__)
+logger.info("Logging configured. Starting application.")
+
+
 
 class SilverProcessor:
     """
