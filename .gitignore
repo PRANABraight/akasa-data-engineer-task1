@@ -4,3 +4,5 @@ data_processing.log
 src/__pycache__
 assets/AkasaAir-DataEngineer-Task1.pdf
 data/
+assets/analytics_dashboard/
+assets/reports/
