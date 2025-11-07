@@ -1,147 +1,280 @@
-import os
-from dotenv import load_dotenv
 import logging
+import logging.config
 from datetime import datetime
-from src import load_data
-from src.in_memory_approach import InMemoryProcessor
-from src.db_approach import get_db_engine, setup_database, get_sql_kpis
-from src.visualization_export import BusinessVisualizer
+import sys
+import os
+import traceback
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('data_processing.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Add src to Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
-load_dotenv()
+from src.config.config_manager import ConfigManager
+from src.bronze.data_loader import DataLoader
+from src.silver.silver_processor import SilverProcessor
+from src.gold.gold_processor import GoldProcessor
+from src.utils.database import DatabaseManager
 
-def main():
-    print("\n" + "="*70)
-    print("CUSTOMER & ORDER ANALYTICS - DATA PROCESSING")
-    print("="*70 + "\n")
+class MedallionArchitecturePipeline:
+    """
+    Main Medallion Architecture Pipeline
+    Implements Bronze → Silver → Gold layers with both in-memory and database approaches
+    """
     
-    customers_file = 'assets/task_DE_new_customers.csv'
-    orders_file = 'assets/task_DE_new_orders.xml'
-    
-    try:
-        print("STEP 1: Loading data files...")
-        print("-" * 70)
+    def __init__(self):
+        self.config = ConfigManager()
+        self.setup_logging()
         
-        customers_df = load_data.load_customers_from_csv(customers_file)
-        orders_df = load_data.load_orders_from_xml(orders_file)
+        self.bronze_loader = None
+        self.silver_processor = None
+        self.gold_processor = None
+        self.db_manager = None
         
-        print(f"Loaded {len(customers_df)} customers")
-        print(f"Loaded {len(orders_df)} order items\n")
+        self.pipeline_results = {}
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        visualizer = BusinessVisualizer()
-        
-        print("\n" + "="*70)
-        print("APPROACH A: TABLE-BASED (USING MYSQL DATABASE)")
-        print("="*70 + "\n")
-        
-        if os.getenv('DB_PASSWORD'):
-            print("Connecting to database...")
-            db_engine = get_db_engine()
-            
-            if db_engine:
-                print("Setting up database and loading data...")
-                setup_database(db_engine, customers_df, orders_df)
-                
-                print("Calculating KPIs using SQL...\n")
-                sql_kpis = get_sql_kpis(db_engine)
-                
-                print("KPI 1: REPEAT CUSTOMERS")
-                print("-" * 70)
-                print(sql_kpis['repeat_customers'].to_string(index=False))
-                
-                print("\n\nKPI 2: MONTHLY ORDER TRENDS")
-                print("-" * 70)
-                print(sql_kpis['monthly_trends'])
-                
-                print("\n\nKPI 3: REGIONAL REVENUE")
-                print("-" * 70)
-                print(sql_kpis['regional_revenue'].to_string(index=False))
-                
-                print("\n\nKPI 4: TOP CUSTOMERS (LAST 30 DAYS)")
-                print("-" * 70)
-                if not sql_kpis['top_spenders'].empty:
-                    print(sql_kpis['top_spenders'].to_string(index=False))
-                else:
-                    print("No customers found in last 30 days")
-                
-                db_report = visualizer.create_business_report(sql_kpis, f"Database_{timestamp}")
-                if db_report:
-                    print(f"\nDatabase visualization: {db_report}")
-                
-                db_engine.dispose()
-                logger.info("Database connection closed")
-            else:
-                print("Could not create database engine.")
-        else:
-            print("Database credentials not found. Add DB_PASSWORD to .env file.")
-        
-        print("\n\n" + "=" * 70)
-        print("APPROACH B: IN-MEMORY (USING PANDAS)")
-        print("=" * 70 + "\n")
-
-        print("Calculating KPIs using Pandas...")
+    def setup_logging(self):
+        """Setup professional logging"""
         try:
-            processor = InMemoryProcessor(customers_df=customers_df, orders_df=orders_df)
-
-            k1_pd = processor.get_repeat_customers()
-            print("KPI 1: REPEAT CUSTOMERS")
-            print("-" * 70)
-            print(k1_pd.to_string(index=False))
-
-            k2_pd = processor.get_monthly_trends()
-            print("\n\nKPI 2: MONTHLY ORDER TRENDS")
-            print("-" * 70)
-            print(k2_pd.to_string(index=False))
-
-            k3_pd = processor.get_regional_revenue()
-            print("\n\nKPI 3: REGIONAL REVENUE")
-            print("-" * 70)
-            print(k3_pd.to_string(index=False))
-
-            k4_pd = processor.get_top_customers_last_30_days()
-            print("\n\nKPI 4: TOP CUSTOMERS (LAST 30 DAYS)")
-            print("-" * 70)
-            if not k4_pd.empty:
-                print(k4_pd.to_string(index=False))
-            else:
-                print("No customers found in last 30 days")
-
-            memory_kpis = {
-                'repeat_customers': k1_pd,
-                'monthly_trends': k2_pd,
-                'regional_revenue': k3_pd,
-                'top_spenders': k4_pd
+            logging_config = self.get_professional_logging_config()  # Use new config
+            logging.config.dictConfig(logging_config)
+            self.logger = logging.getLogger(__name__)
+            self.logger.info("Pipeline initialized")
+        except Exception as e:
+            print(f"Logging setup failed: {e}")
+            logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+            self.logger = logging.getLogger(__name__)
+        
+    def run_bronze_layer(self) -> dict:
+        """
+        Bronze Layer Execution: Raw Data Ingestion
+        """
+        self.logger.info("="*70)
+        self.logger.info("BRONZE LAYER: Raw Data Ingestion")
+        self.logger.info("="*70)
+        
+        try:
+            # Validate file paths
+            self.config.validate_paths()
+            paths = self.config.file_paths
+            
+            # Initialize bronze loader
+            self.bronze_loader = DataLoader(
+                str(paths['customers_csv']),
+                str(paths['orders_xml'])
+            )
+            
+            # Load all bronze data
+            bronze_data = self.bronze_loader.load_all_bronze_data()
+            
+            # Save to persistent storage
+            saved_paths = self.bronze_loader.save_all_bronze_data(str(paths['bronze_data']))
+            
+            self.pipeline_results['bronze'] = {
+                'data': bronze_data,
+                'saved_paths': saved_paths,
+                'timestamp': datetime.utcnow()
             }
             
-            memory_report = visualizer.create_business_report(memory_kpis, f"InMemory_{timestamp}")
-            if memory_report:
-                print(f"\nIn-memory visualization: {memory_report}")
-
-        except Exception as ex:
-            logger.exception("Error running Pandas approach")
-            print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - ERROR - {ex}")
-
-        print("\n\n" + "="*70)
-        print("PROCESSING COMPLETE!")
-        print("="*70)
-        print("\nAll KPIs calculated successfully")
-        print("Check 'data_processing.log' for detailed logs")
-        print("Check 'analytics_dashboards/' folder for visualizations\n")
+            self.logger.info(f"Bronze layer completed: {len(bronze_data['customers'])} customers, {len(bronze_data['orders'])} orders")
+            return bronze_data
+            
+        except Exception as e:
+            self.logger.error(f"Bronze layer failed: {e}")
+            self.logger.error(traceback.format_exc())
+            raise
+            
+    def run_silver_layer(self, bronze_data: dict) -> dict:
+        """
+        Silver Layer Execution: Data Cleaning & Validation
         
+        """
+        self.logger.info("="*70)
+        self.logger.info("SILVER LAYER: Data Cleaning & Validation")
+        self.logger.info("="*70)
+        
+        try:
+            # Initialize silver processor
+            self.silver_processor = SilverProcessor()
+            
+            # Process to silver layer
+            silver_data = self.silver_processor.process_to_silver(bronze_data)
+            
+            # Save to persistent storage
+            paths = self.config.file_paths
+            saved_paths = self.silver_processor.save_silver_data(str(paths['silver_data']))
+            
+            # Optional: Save to database
+            self.db_manager = DatabaseManager()
+            if self.db_manager.engine:
+                try:
+                    self.db_manager.save_to_database(silver_data['customers'], 'customers', 'silver')
+                    self.db_manager.save_to_database(silver_data['orders'], 'orders', 'silver')
+                    self.db_manager.create_indexes()
+                    self.logger.info("Silver data saved to database")
+                except Exception as db_error:
+                    self.logger.warning(f"Database save failed but continuing: {db_error}")
+            
+            self.pipeline_results['silver'] = {
+                'data': silver_data,
+                'saved_paths': saved_paths,
+                'timestamp': datetime.utcnow()
+            }
+            
+            self.logger.info("Silver layer completed: Data cleaned, validated, and enriched")
+            return silver_data
+            
+        except Exception as e:
+            self.logger.error(f"Silver layer failed: {e}")
+            self.logger.error(f"Detailed error: {traceback.format_exc()}")
+            
+            # Try to provide more context about the error
+            if "region_group" in str(e):
+                self.logger.error("The error seems to be related to region_group column. Checking data structure...")
+                if bronze_data and 'customers' in bronze_data:
+                    self.logger.info(f"Customers columns: {list(bronze_data['customers'].columns)}")
+                if bronze_data and 'orders' in bronze_data:
+                    self.logger.info(f"Orders columns: {list(bronze_data['orders'].columns)}")
+            
+            raise
+            
+    def run_gold_layer(self, silver_data: dict, calculate_additional_metrics: bool = False) -> dict:
+        """
+        Gold Layer Execution: Business KPI Calculation
+        """
+        self.logger.info("="*70)
+        self.logger.info("GOLD LAYER: Business KPI Calculation")
+        self.logger.info("="*70)
+        
+        try:
+            # Initialize gold processor
+            self.gold_processor = GoldProcessor()
+            
+            # Process to gold layer
+            gold_data = self.gold_processor.process_to_gold(silver_data, calculate_additional_metrics)
+            
+            # Save to persistent storage
+            paths = self.config.file_paths
+            saved_paths = self.gold_processor.save_gold_data(str(paths['gold_data']))
+            
+            # Optional: Calculate KPIs using SQL (Table-Based Approach)
+            sql_kpis = {}
+            if self.db_manager and self.db_manager.engine:
+                try:
+                    sql_kpis = self.db_manager.calculate_kpis_sql()
+                    self.logger.info("KPIs calculated using SQL (Table-Based Approach)")
+                except Exception as sql_error:
+                    self.logger.warning(f"SQL KPI calculation failed but continuing: {sql_error}")
+            
+            self.pipeline_results['gold'] = {
+                'data': gold_data,
+                'saved_paths': saved_paths,
+                'sql_kpis': sql_kpis,
+                'timestamp': datetime.utcnow()
+            }
+            
+            # Display results
+            self.gold_processor.display_kpi_results()
+            
+            self.logger.info("Gold layer completed: All business KPIs calculated")
+            return gold_data
+            
+        except Exception as e:
+            self.logger.error(f"Gold layer failed: {e}")
+            self.logger.error(traceback.format_exc())
+            raise
+            
+    def run_table_based_approach(self):
+        """
+        Table-Based Approach: Using SQL database for KPI calculation
+        """
+        self.logger.info("="*70)
+        self.logger.info("TABLE-BASED APPROACH: SQL Database Processing")
+        self.logger.info("="*70)
+        
+        if not self.db_manager or not self.db_manager.engine:
+            self.logger.warning("No database connection available for table-based approach")
+            return
+            
+        try:
+            # Calculate KPIs using SQL
+            sql_kpis = self.db_manager.calculate_kpis_sql()
+            
+            # Display SQL results
+            print("\n" + "="*70)
+            print("SQL DATABASE KPI RESULTS")
+            print("="*70)
+            
+            for kpi_name, kpi_data in sql_kpis.items():
+                if not kpi_data.empty:
+                    print(f"\n{kpi_name.upper().replace('_', ' ')} (SQL):")
+                    print("-" * 50)
+                    print(kpi_data.to_string(index=False))
+                    
+            self.logger.info("Table-based approach completed successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Table-based approach failed: {e}")
+            
+    def run_complete_pipeline(self, calculate_additional_metrics: bool = False):
+        """
+        Run complete Medallion Architecture pipeline
+       """
+        try:
+            start_time = datetime.utcnow()
+            self.logger.info("Starting Medallion Architecture Pipeline")
+            
+            # Execute all layers
+            bronze_data = self.run_bronze_layer()
+            silver_data = self.run_silver_layer(bronze_data)
+            gold_data = self.run_gold_layer(silver_data, calculate_additional_metrics)
+            
+            # Run table-based approach if database available
+            self.run_table_based_approach()
+            
+            # Calculate pipeline statistics
+            duration = (datetime.utcnow() - start_time).total_seconds()
+            
+            self.logger.info("="*70)
+            self.logger.info("PIPELINE EXECUTION SUMMARY")
+            self.logger.info("="*70)
+            self.logger.info(f"Total duration: {duration:.2f} seconds")
+            self.logger.info(f"Bronze records: {len(bronze_data['customers'])} customers, {len(bronze_data['orders'])} orders")
+            self.logger.info(f"Silver records: {len(silver_data['customers'])} customers, {len(silver_data['orders'])} orders")
+            self.logger.info(f"KPIs calculated: {len(gold_data['required_kpis']) - 1}")
+            
+            
+            
+        except Exception as e:
+            self.logger.error(f"Pipeline execution failed: {e}")
+            self.logger.error(f"Full error traceback: {traceback.format_exc()}")
+            print(f"\nPipeline execution failed: {e}")
+            print(f"Check logs/akasaair_processing.log for detailed error information")
+            sys.exit(1)
+
+def main():
+    """
+    Main execution function
+    """
+    print("\n" + "="*70)
+    print("MEDALLION ARCHITECTURE DATA PIPELINE")
+    print("="*70)
+    print("Implementing Bronze → Silver → Gold Layers")
+    print("With Both In-Memory and Table-Based Approaches")
+    print("="*70)
+    
+    try:
+        # Initialize and run pipeline
+        pipeline = MedallionArchitecturePipeline()
+        
+        # Run complete pipeline
+        pipeline.run_complete_pipeline(calculate_additional_metrics=True)
+        
+    except KeyboardInterrupt:
+        print("\nPipeline execution interrupted by user")
+        sys.exit(1)
     except Exception as e:
-        logger.error(f"Error in main program: {e}")
-        print(f"\nError occurred: {e}")
-        print("Check 'data_processing.log' for details\n")
+        print(f"\nFatal error: {e}")
+        print(f"Detailed error information in logs/akasaair_processing.log")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

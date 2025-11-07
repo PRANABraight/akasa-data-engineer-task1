@@ -1,202 +1,271 @@
+# Akasa Air - Medallion Architecture Data Platform
 
+## 🏢 Enterprise Data Analytics Solution
 
-## What This Program Does
+A production-grade data engineering platform implementing the Medallion Architecture for comprehensive customer and order analytics. This scalable solution processes multi-format data sources through Bronze, Silver, and Gold layers to deliver actionable business intelligence.
 
-Calculates 4 important business metrics (KPIs):
+![Medallion Architecture](https://img.shields.io/badge/Architecture-Medallion-blue)
+![Python](https://img.shields.io/badge/Python-3.8%2B-green)
+![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-orange)
 
-1. **Repeat Customers** - Finds customers who ordered more than once
-2. **Monthly Trends** - Shows how many orders per month
-3. **Regional Revenue** - Shows which regions make most money
-4. **Top Customers** - Top 10 customers by spending (last 30 days)
+## 🎯 Business Value Proposition
 
-## Step-by-Step Setup
+**Transform raw customer and order data into strategic business insights** through automated data pipelines that ensure data quality, reliability, and actionable intelligence delivery.
 
+## 📊 Core Business KPIs
 
+| KPI | Business Impact | Use Case |
+|-----|-----------------|----------|
+| **Repeat Customer Analysis** | Customer retention & loyalty programs | Identify high-value returning customers |
+| **Monthly Business Trends** | Revenue forecasting & performance tracking | Time-series analysis of order patterns |
+| **Regional Revenue Distribution** | Market penetration & resource allocation | Geographic performance optimization |
+| **Top Customers (30-Day)** | VIP customer identification | Targeted marketing & personalized offers |
 
+## 🏗️ Technical Architecture
 
-### Step 1: Install Required Libraries
+### Medallion Architecture Implementation
+
+```
+Raw Data Sources
+      ↓
+┌─────────────────┐
+│   BRONZE LAYER  │ → Raw Data Ingestion & Preservation
+│  - CSV/XML      │ → Schema Validation
+│  - Audit Trail  │ → Source System Metadata
+└─────────────────┘
+      ↓
+┌─────────────────┐
+│   SILVER LAYER  │ → Data Cleaning & Validation
+│  - Data Quality │ → Business Rule Enforcement
+│  - Enrichment   │ → Feature Engineering
+└─────────────────┘
+      ↓
+┌─────────────────┐
+│    GOLD LAYER   │ → Business Intelligence
+│  - KPI Calculation │ → Advanced Analytics
+│  - Visualization │ → Executive Reporting
+└─────────────────┘
+```
+
+### Dual Processing Engine
+
+| Approach | Use Case | Advantages |
+|----------|----------|------------|
+| **In-Memory (Pandas)** | Rapid development & testing | Zero dependencies, instant execution |
+| **Database (MySQL)** | Production workloads | Scalability, ACID compliance, SQL power |
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Python 3.8+**
+- **MySQL 8.0+** (Optional, for database approach)
+- **Required Packages**: `pip install -r requirements.txt`
+
+### Installation & Setup
 
 ```bash
-# Install all needed libraries
+# 1. Clone and navigate to project
+cd akasa-data-engineer-task1
+
+# 2. Install dependencies
 pip install -r requirements.txt
-```
 
-### Step 2: Setup Database (Optional)
+# 3. Configure environment (Optional - for database features)
+cp .env.example .env
+# Edit .env with your database credentials
 
-If you want to use MySQL database:
-
-1. Install MySQL from: https://dev.mysql.com/downloads/
-
-2. Create a database:
-```sql
-CREATE DATABASE akasaair_analytics;
-```
-
-### Step 3. Create `.env` file with your passwords:
-```
-DB_HOST=localhost
-DB_NAME=akasaair_analytics
-DB_USER=root
-DB_PASSWORD=your_password_here
-```
-
-**Important:** Keep `.env` file secret! Don't share it with anyone!
-
-### Step 6: Run the Program
-
-```bash
+# 4. Run the pipeline
 python main.py
 ```
 
-## Understanding the Output
+### Environment Configuration
 
-### Example Output:
-
-```
-KPI 1: REPEAT CUSTOMERS
-----------------------------------------------------------------------
-customer_id  customer_name    region  order_count  total_spend
-CUST-001     Aarav Mehta      West    2            12749.00
-```
-
-This means:
-- Aarav Mehta ordered 2 times
-- Total spent: ₹12,749
-- Lives in West region
-
-## Two Ways to Process Data
-
-### Option A: Table-Based (MySQL Database)
-- **When to use:** Large datasets (1 million+ rows)
-- **Pros:** Very fast for complex queries
-- **Cons:** Need to install MySQL
-
-### Option B: In-Memory (Pandas)
-- **When to use:** Small datasets (< 1 million rows)
-- **Pros:** Easy, no database needed
-- **Cons:** Uses computer memory
-
-**The program runs BOTH approaches automatically!**
-
-
-
-### Problem 1: "Can't connect to database"
-**Solution:** 
-- Check if MySQL is running
-- Check passwords in `.env` file
-- The program will still work with in-memory approach!
-
-
-
-## What Each File Does
-
-### `main.py`
-The main program with two classes:
-- `TableBasedProcessor` - Uses MySQL database
-- `InMemoryProcessor` - Uses Pandas (no database)
-
-### `requirements.txt`
-Lists all Python libraries needed:
-```
-pandas                  # For data processing
-mysql-connector-python  # For database
-python-dotenv           # For loading passwords safely
-```
-
-### `.env` 
-Stores passwords safely:
-```
+```env
+# Database Configuration (Optional)
 DB_HOST=localhost
+DB_PORT=3306
 DB_NAME=akasaair_analytics
-DB_USER=root
-DB_PASSWORD=your_password
+DB_USER=your_username
+DB_PASSWORD=your_secure_password
+
+# Application Settings
+LOG_LEVEL=INFO
+DATA_DIR=./data
 ```
 
-### `data_processing.log`
-Records what happened (auto-created):
+## 📁 Data Sources & Schema
+
+### Customer Data (CSV)
+```csv
+customer_id,customer_name,mobile_number,region
+CUST001,Aarav Mehta,9876543210,North
+CUST002,Priya Singh,9876543211,South
 ```
-2025-11-06 10:30:15 - INFO - Loading customers from assets/customers.csv
-2025-11-06 10:30:16 - INFO - Successfully loaded 5 customers
+
+### Order Data (XML)
+```xml
+<order>
+    <order_id>ORD001</order_id>
+    <mobile_number>9876543210</mobile_number>
+    <order_date_time>2024-01-15 14:30:00</order_date_time>
+    <sku_id>SKU1001</sku_id>
+    <sku_count>2</sku_count>
+    <total_amount>35720</total_amount>
+</order>
 ```
 
-## Security Tips
+## 🔧 Core Components
 
-**DO:**
-- Keep `.env` file private
-- Use parameterized queries (already done in code!)
-- Check logs for errors
+### Bronze Layer - Raw Data Ingestion
+- **CSVIngestor**: Customer data processing with schema validation
+- **XMLIngestor**: Order data extraction with structure preservation
+- **DataLoader**: Coordination of multi-source data ingestion
 
+### Silver Layer - Data Refinement
+- **DataCleaner**: Data quality enforcement & standardization
+- **DataValidator**: Comprehensive validation rules & integrity checks
+- **DataEnricher**: Feature engineering & business context addition
 
-## Understanding the Code
+### Gold Layer - Business Intelligence
+- **KPICalculator**: Core KPI computation engine
+- **BusinessMetrics**: Advanced analytics & customer segmentation
+- **Visualization Engine**: Professional dashboard generation
+- **ReportGenerator**: Multi-format business reporting
 
-### Loading CSV Data
+## 📈 Output & Deliverables
+
+### KPI Results
+```
+BUSINESS KPI RESULTS
+==========================================
+
+REPEAT CUSTOMERS:
+--------------------------------------------------
+customer_name    | number_of_orders
+Aarav Mehta      | 2
+Priya Singh      | 3
+
+MONTHLY TRENDS:
+--------------------------------------------------
+month    | total_orders | total_revenue
+2024-01  | 15           | 245,800
+2024-02  | 18           | 298,450
+
+REGIONAL REVENUE:
+--------------------------------------------------
+region | regional_revenue
+North  | 545,200
+South  | 398,750
+```
+
+### Visualization Assets
+- **Comprehensive Business Dashboard** (`assets/analytics_dashboards/`)
+- **Regional Performance Analysis**
+- **Customer Segmentation Charts**
+- **Revenue Trend Analysis**
+
+### Data Artifacts
+- **Bronze**: Raw data preservation (Parquet format)
+- **Silver**: Cleaned & enriched datasets
+- **Gold**: KPI results & business metrics
+
+## 🛡️ Security & Compliance
+
+### Data Protection
+- Environment-based credential management
+- Parameterized SQL queries preventing injection
+- Input validation & sanitization pipelines
+- Secure audit logging
+
+### Access Control
+- Database credential isolation
+- File system permission enforcement
+- Comprehensive audit trails
+
+## 📊 Performance & Monitoring
+
+### Processing Capabilities
+- **Bronze Layer**: Multi-format ingestion with validation
+- **Silver Layer**: Data quality enforcement & enrichment
+- **Gold Layer**: Real-time KPI computation & visualization
+
+### Monitoring Features
+- Structured logging with rotation
+- Performance metrics tracking
+- Data quality validation reporting
+- Pipeline health monitoring
+
+## 🔄 Execution Flow
+
 ```python
-def load_customers_from_csv(file_path):
-    df = pd.read_csv(file_path)  # Read file
-    df = df.dropna()              # Remove empty rows
-    return df                     # Return data
+# Complete pipeline execution
+pipeline = MedallionArchitecturePipeline()
+pipeline.run_complete_pipeline()
+
+# Individual layer execution
+bronze_data = pipeline.run_bronze_layer()      # Raw ingestion
+silver_data = pipeline.run_silver_layer()      # Cleaning & validation  
+gold_data = pipeline.run_gold_layer()          # KPI calculation
 ```
 
-### Loading XML Data
+## 🎨 Visualization Features
+
+### Business Dashboards
+- **Regional Revenue Distribution**
+- **Customer Segmentation Analysis**
+- **Monthly Performance Trends**
+- **Top Customer Identification**
+
+### Export Formats
+- High-resolution PNG dashboards
+- Text-based business reports
+- JSON-structured data exports
+- Database-persisted results
+
+## 🔧 Extension Framework
+
+### Adding New KPIs
 ```python
-def load_orders_from_xml(file_path):
-    tree = ET.parse(file_path)   # Read XML
-    root = tree.getroot()         # Get root element
-    # Extract data...
+class ExtendedKPICalculator(KPICalculator):
+    def calculate_customer_lifetime_value(self):
+        """
+        Template for new KPI implementation
+        """
+        # Data extraction
+        # Business logic application  
+        # Result formatting
+        return kpi_dataframe
 ```
 
-### Calculating KPI (Example)
-```python
-def get_repeat_customers(self):
-    # Step 1: Count orders per customer
-    # Step 2: Filter customers with > 1 order
-    # Step 3: Return results
+### Integration Opportunities
+- **Data Warehouses**: Snowflake, BigQuery, Redshift
+- **BI Tools**: Tableau, Power BI, Looker
+- **Orchestration**: Apache Airflow, Prefect, Dagster
+- **APIs**: RESTful endpoints for external consumption
+
+## 📞 Support & Maintenance
+
+### Logging & Diagnostics
+- Comprehensive log files in `logs/` directory
+- Detailed error tracking with tracebacks
+- Performance timing metrics
+- Data validation summaries
+
+### Troubleshooting
+```bash
+# Check pipeline health
+tail -f logs/akasaair_processing.log
+
+# Verify data quality
+python -m src.utils.data_validator
+
+# Test individual components
+python -m src.bronze.data_loader
 ```
 
 
-
-## Next Steps
-
-Once comfortable with this, try:
-
-1. **Add more KPIs**
-   - Average order value per customer
-   - Most popular products
-   - Customer growth rate
-
-2. **Add visualizations**
-   ```python
-   import matplotlib.pyplot as plt
-   df.plot(kind='bar')
-   plt.show()
-   ```
-
-3. **Automate daily runs**
-   - Use Windows Task Scheduler
-   - Or cron jobs on Linux
-
-4. **Export results to Excel**
-   ```python
-   df.to_excel('results.xlsx', index=False)
-   ```
-
-## Checklist
-
-Before running:
--  Python installed
--  Created project folder
--  Installed libraries (`pip install -r requirements.txt`)
--  Data files in `assets/` folder
--  (Optional) MySQL installed and `.env` created
 
 ---
-PROCESSING COMPLETE!
 
-
-All KPIs calculated successfully
-Check 'data_processing.log' for detailed logs
-
-
----
-
-**Made with ❤️ by Pranab**
+**Built with ❤️ by Pranab**
