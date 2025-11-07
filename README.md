@@ -135,28 +135,34 @@ CUST002,Priya Singh,9876543211,South
 
 ## 📈 Output & Deliverables
 
-### KPI Results
+### KPI Results ()
 ```
+======================================================================        
 BUSINESS KPI RESULTS
-==========================================
+======================================================================        
 
 REPEAT CUSTOMERS:
 --------------------------------------------------
-customer_name    | number_of_orders
-Aarav Mehta      | 2
-Priya Singh      | 3
+customer_name  number_of_orders        
+  Aarav Mehta                 2        
 
 MONTHLY TRENDS:
 --------------------------------------------------
-month    | total_orders | total_revenue
-2024-01  | 15           | 245,800
-2024-02  | 18           | 298,450
+  month  total_orders  total_revenue   
+2025-09             1          35720   
+2025-10             1          22350   
+2025-11             1          15897   
 
 REGIONAL REVENUE:
 --------------------------------------------------
-region | regional_revenue
-North  | 545,200
-South  | 398,750
+region  regional_revenue
+  West             38247
+ North             35720
+
+TOP CUSTOMERS 30D:
+--------------------------------------------------
+customer_name  recent_spend
+  Aarav Mehta         38247
 ```
 
 ### Visualization Assets
