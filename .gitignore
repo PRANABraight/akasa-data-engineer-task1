@@ -1,3 +1,4 @@
+.env
 logs/
 data_processing.log
 .vscode
